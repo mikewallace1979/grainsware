@@ -35,7 +35,7 @@ Totally GPL v3.
 //#define CLK_OUT_4   5
 
 #define GATE_THRESHOLD 32
-#define SEQ_MAX_LENGTH 16
+#define SEQ_MAX_LENGTH 8
 #define MAX_V_OUT 4095
 
 #define DEBUG false
