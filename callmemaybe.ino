@@ -31,7 +31,6 @@ Totally GPL v3.
 //#define CLK_OUT_4   5
 
 #define GATE_THRESHOLD 32
-#define OUT_GATE_LENGTH 10
 #define SEQ_MAX_LENGTH 16
 #define MAX_V_OUT 4095
 
@@ -60,9 +59,9 @@ volatile int v_out_2 = 0;
 volatile int next_v_out_2 = 0;
 volatile int v_reset = 0;
 
-unsigned long clk_out_1_high_time = 0;
 bool clk_out_1_high = false;
 volatile bool clk_out_1_high_request = false;
+volatile bool clk_out_1_low_request = false;
 volatile bool loop_lfo = false;
 
 void setup() {
@@ -101,14 +100,14 @@ void loop() {
     lfo_inc = cv_in_2 >> 3;
 
     if (clk_out_1_high_request && !clk_out_1_high) {
-      clk_out_1_high_time = millis();
       digitalWrite(CLK_OUT_1, HIGH);
       clk_out_1_high = true;
+      clk_out_1_high_request = false;
     }
-    if (clk_out_1_high && (millis() - clk_out_1_high_time > OUT_GATE_LENGTH)) {
+    if (clk_out_1_low_request && clk_out_high) {
       digitalWrite(CLK_OUT_1, LOW);
       clk_out_1_high = false;
-      clk_out_1_high_request = false;
+      clk_out_1_low_request = false;
     }
   }
   // Detect rising edge
@@ -120,7 +119,6 @@ void loop() {
       if (lfo_active) {
         digitalWrite(CLK_OUT_1, HIGH);
         clk_out_1_high = true;
-        clk_out_1_high_time = millis();
       }
       lfo_active = true;
       lfo_rising = true;
@@ -239,6 +237,8 @@ ISR(TIMER2_OVF_vect)
     if (lfo_rising) {
       next_v_out_2 = v_out_2 + lfo_inc;
       if (next_v_out_2 > MAX_V_OUT) {
+        // End of LFO rising cycle
+        clk_out_1_low_request = true;
         next_v_out_2 = v_out_2 - lfo_inc;
         lfo_rising = false;
       }
