@@ -155,8 +155,9 @@ void loop() {
       seq_rand[seq_ptr % SEQ_MAX_LENGTH] = v_out;
       seq_ptr++;
     }
+
     ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {  
-      set_voltage(v_out, 0, true);
+      set_voltage(v_out, 0, false);
     }
   } else if (is_falling_edge(last_gate, gate)) {
     // Nothing to do right now
@@ -170,7 +171,7 @@ void loop() {
 void set_voltage(unsigned int v, int dac, bool led) {
   setVoltage(DAC, dac, 1, v);
   if (led) {
-    analogWrite(LED, map(v, 0, MAX_V_OUT, 0, 255));
+    analogWrite(LED, map(v, 0, v_out, 0, 255));
   }
 }
 
@@ -261,12 +262,12 @@ ISR(TIMER2_OVF_vect)
         lfo_reset = false;
       } else {
         v_reset -= 128;
-        set_voltage(v_reset, 1, false);
+        set_voltage(v_reset, 1, true);
       }
     }
     v_out_2 = next_v_out_2;
     if (!lfo_reset) {
-      set_voltage(v_out_2, 1, false);
+      set_voltage(v_out_2, 1, true);
     }
   }
 }
