@@ -15,6 +15,10 @@ Totally GPL v3.
 #include <avr/pgmspace.h>
 #include <util/atomic.h>
 
+#define CV_CCW     0
+#define CV_MID     410
+#define CV_CW      820
+
 #define CV_IN_1    A0
 #define CV_IN_2    A1
 //#define CV_IN_3    A2
@@ -36,6 +40,10 @@ Totally GPL v3.
 
 #define DEBUG false
 
+#define TRIANGLE 0
+#define SAWTOOTH 1
+#define RESET_INC 128
+
 int gate = 0;
 int last_gate = 0;
 int cv_in_1 = 0;
@@ -49,6 +57,7 @@ unsigned int cycle_ptr = 0;
 
 int v_out = 0;
 
+volatile int lfo_shape = TRIANGLE;
 volatile byte lfo_inc = 0;
 volatile bool lfo_rising = true;
 volatile bool lfo_active = false;
@@ -62,7 +71,7 @@ volatile int v_reset = 0;
 bool clk_out_1_high = false;
 volatile bool clk_out_1_high_request = false;
 volatile bool clk_out_1_low_request = false;
-volatile bool loop_lfo = false;
+volatile bool loop_lfo = true;
 
 void setup() {
   // Interrupt magic from multi-tool firmware
@@ -95,9 +104,15 @@ void loop() {
   last_gate = gate;
   gate = analogRead(CLK_IN_1);
   
-  cv_in_2 = map(analogRead(CV_IN_2), 0, 820, 8, 1024);
+  cv_in_2 = map(analogRead(CV_IN_2), 0, CV_CW, 8, 1024);
   ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-    lfo_inc = cv_in_2 >> 3;
+    if (cv_in_2 >= 512) {
+      cv_in_2 = cv_in_2 - 512;
+      lfo_shape = SAWTOOTH;
+    } else {
+      lfo_shape = TRIANGLE;
+    }
+    lfo_inc = cv_in_2 >> 2;
 
     if (clk_out_1_high_request && !clk_out_1_high) {
       digitalWrite(CLK_OUT_1, HIGH);
@@ -125,7 +140,7 @@ void loop() {
       lfo_reset_request = true;
     }
     
-    seq_length = map(analogRead(CV_IN_1), 0, 820, SEQ_MAX_LENGTH, 1);
+    seq_length = map(analogRead(CV_IN_1), 0, CV_CW, SEQ_MAX_LENGTH, 1);
 
     if (cycle_mode == false && seq_length < SEQ_MAX_LENGTH) {
       // State: Transitioning to cycle
@@ -235,7 +250,11 @@ ISR(TIMER2_OVF_vect)
   }
   if (lfo_active) {
     if (lfo_rising) {
-      next_v_out_2 = v_out_2 + lfo_inc;
+      if (lfo_shape == TRIANGLE) {
+        next_v_out_2 = v_out_2 + lfo_inc;
+      } else if (lfo_shape == SAWTOOTH) {
+        next_v_out_2 = v_out_2 + RESET_INC;
+      }
       if (next_v_out_2 > MAX_V_OUT) {
         // End of LFO rising cycle
         clk_out_1_low_request = true;
@@ -258,10 +277,10 @@ ISR(TIMER2_OVF_vect)
       }
     }
     if (lfo_reset) {
-      if (v_reset - 128 <= v_out_2) {
+      if (v_reset - RESET_INC <= v_out_2) {
         lfo_reset = false;
       } else {
-        v_reset -= 128;
+        v_reset -= RESET_INC;
         set_voltage(v_reset, 1, true);
       }
     }
