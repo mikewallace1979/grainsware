@@ -119,7 +119,7 @@ void loop() {
       clk_out_1_high = true;
       clk_out_1_high_request = false;
     }
-    if (clk_out_1_low_request && clk_out_high) {
+    if (clk_out_1_low_request && clk_out_1_high) {
       digitalWrite(CLK_OUT_1, LOW);
       clk_out_1_high = false;
       clk_out_1_low_request = false;
