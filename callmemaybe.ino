@@ -16,7 +16,7 @@ Totally GPL v3.
 #include <util/atomic.h>
 
 #define CV_CCW     0
-#define CV_MID     410
+#define CV_MID     420
 #define CV_CW      820
 
 #define CV_IN_1    A0
@@ -49,7 +49,7 @@ int last_gate = 0;
 int cv_in_1 = 0;
 int cv_in_2 = 0;
 int delay_ms = 410;
-int seq_rand[SEQ_MAX_LENGTH];
+int seq_rand[] = {0, 1024, 2048, 3072, 4095, 3072, 2048, 1024};
 unsigned int seq_ptr = 0;
 unsigned int seq_length = SEQ_MAX_LENGTH + 1;
 bool cycle_mode = false;
@@ -104,10 +104,10 @@ void loop() {
   last_gate = gate;
   gate = analogRead(CLK_IN_1);
   
-  cv_in_2 = map(analogRead(CV_IN_2), 0, CV_CW, 8, 1024);
+  cv_in_2 = map(analogRead(CV_IN_2), 0, CV_CW, 8, 512);
   ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {
-    if (cv_in_2 >= 512) {
-      cv_in_2 = cv_in_2 - 512;
+    if (cv_in_2 >= 256) {
+      cv_in_2 = cv_in_2 - 256;
       lfo_shape = SAWTOOTH;
     } else {
       lfo_shape = TRIANGLE;
@@ -184,7 +184,8 @@ void loop() {
 void set_voltage(unsigned int v, int dac, bool led) {
   setVoltage(DAC, dac, 1, v);
   if (led) {
-    analogWrite(LED, map(v, 0, v_out, 0, 255));
+    int scaled_v = map(v, 0, MAX_V_OUT, 0, v_out);
+    analogWrite(LED, map(scaled_v, 0, MAX_V_OUT, 0, 255));
   }
 }
 
