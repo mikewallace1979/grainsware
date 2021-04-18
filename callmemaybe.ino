@@ -55,7 +55,8 @@ unsigned int seq_length = SEQ_MAX_LENGTH + 1;
 bool cycle_mode = false;
 unsigned int cycle_ptr = 0;
 
-int v_out = 0;
+volatile int v_out = 0;
+volatile int target_v_out = 0;
 
 volatile int lfo_shape = TRIANGLE;
 volatile byte lfo_inc = 0;
@@ -155,7 +156,7 @@ void loop() {
 
     if (cycle_mode) {
       // State: In cycle
-      v_out = seq_rand[seq_ptr % SEQ_MAX_LENGTH];
+      target_v_out = seq_rand[seq_ptr % SEQ_MAX_LENGTH];
       if (seq_ptr == cycle_ptr) {
         // Beginning of cycle - could send a clock out here
         seq_ptr -= seq_length;
@@ -164,13 +165,9 @@ void loop() {
       }
     } else {
       // State: Out of cycle
-      v_out = random(MAX_V_OUT);
+      target_v_out = random(MAX_V_OUT);
       seq_rand[seq_ptr % SEQ_MAX_LENGTH] = v_out;
       seq_ptr++;
-    }
-
-    ATOMIC_BLOCK(ATOMIC_RESTORESTATE) {  
-      set_voltage(v_out, 0, false);
     }
   } else if (is_falling_edge(last_gate, gate)) {
     // Nothing to do right now
@@ -184,7 +181,7 @@ void loop() {
 void set_voltage(unsigned int v, int dac, bool led) {
   setVoltage(DAC, dac, 1, v);
   if (led) {
-    int scaled_v = map(v, 0, MAX_V_OUT, 0, v_out);
+    int scaled_v = map(v, 0, MAX_V_OUT, 0, target_v_out);
     analogWrite(LED, map(scaled_v, 0, MAX_V_OUT, 0, 255));
   }
 }
@@ -290,4 +287,11 @@ ISR(TIMER2_OVF_vect)
       set_voltage(v_out_2, 1, true);
     }
   }
+  // Now the LFO has been done, adjust the random output
+  if (v_out < target_v_out) {
+    v_out += lfo_inc;
+  } else if (v_out > target_v_out) {
+    v_out -= lfo_inc;
+  }
+  set_voltage(v_out, 0, false);
 }
