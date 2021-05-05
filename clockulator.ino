@@ -1,6 +1,39 @@
 /*
-Alternate firmware for the ginky synthese grains eurorack module
-Derived from code by a773 (atte.dk) and released under the GPL licence
+A probabilistic clock divider for the Ginko Synthese Grains eurorack module.
+Derived from code by a773 (atte.dk):
+- https://github.com/attejensen/a773_grains/blob/784c28658dfbdefe98246051a63527a0c8f1063b/mult_div/mult_div.ino
+Released under the GPL licence.
+Guaranteed 100% not bug free, i.e.: it's going to have bugs.
+User guide:
+# Input 1 / Upper pot
+- Size of the resulting divisions relative to the incoming pulse.
+- From fully CCW to fully CW: 16, 8, 4, 2, 1.
+# Input 2 / Middle pot
+- Probability that a division will actually trigger.
+- Fully counter-clockwise nothing will be sent to the output.
+- Fully clockwise every division will be sent to the output.
+# Input 3
+- Clock input.
+- Triggers or gates should both work.
+- Only tested with the clock from the Arturia Keystep but can confirm
+  it works for me.
+# Lower pot
+- Defines what to send to the output.
+- Fully CCW: Random analogue voltages via the Grains filtered PWM output.
+             I'd hoped this would be usable for pitch but it's not stable enough.
+             It works ok when fed into modulation inputs so if you just want
+             envelope decay to switch to a new random value on every clock pulse
+             or similar then this has got you covered.
+- Left of 12-o-clock: Triggers.
+- Right of 12-o-clock: Gates.
+# Gotchas
+The main gotcha is that something about the clock output doesn't play
+nicely triggering envelopes - it kinda works but not always. If you
+buffer it through something else it's fine. I don't know what's going
+on there but I'm guessing it's related to the output being low-pass
+filtered?
+Also the pots are not linear but the mapping to values is linear so
+bear that in mind (or file a PR... :P).
 */
 
 #include <avr/io.h>
