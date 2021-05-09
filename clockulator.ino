@@ -13,8 +13,14 @@ User guide:
 
 # Input 1 / Upper pot
 
-- Size of the resulting divisions relative to the incoming pulse.
-- From fully CCW to fully CW: 16, 8, 4, 2, 1.
+- Defines what to send to the output.
+- Fully CCW: Random analogue voltages via the Grains filtered PWM output.
+             I'd hoped this would be usable for pitch but it's not stable enough.
+             It works ok when fed into modulation inputs so if you just want
+             envelope decay to switch to a new random value on every clock pulse
+             or similar then this has got you covered.
+- Left of 12-o-clock: Triggers.
+- Right of 12-o-clock: Gates.
 
 # Input 2 / Middle pot
 
@@ -31,14 +37,8 @@ User guide:
 
 # Lower pot
 
-- Defines what to send to the output.
-- Fully CCW: Random analogue voltages via the Grains filtered PWM output.
-             I'd hoped this would be usable for pitch but it's not stable enough.
-             It works ok when fed into modulation inputs so if you just want
-             envelope decay to switch to a new random value on every clock pulse
-             or similar then this has got you covered.
-- Left of 12-o-clock: Triggers.
-- Right of 12-o-clock: Gates.
+- Size of the resulting divisions relative to the incoming pulse.
+- From fully CCW to fully CW: 16, 8, 4, 2, 1.
 
 # Gotchas
 
@@ -114,7 +114,7 @@ void trigger(mode current_mode) {
 }
 
 mode get_mode() {
-  switch (map(analogRead(LOWER_POT), 0, LOWER_POT_MAX, 0, 2)) {
+  switch (map(analogRead(UPPER_POT), 0, UPPER_POT_MAX, 0, 2)) {
     case 0:
       return mode_random_cv;
     case 1:
@@ -125,7 +125,7 @@ mode get_mode() {
 }
 
 byte get_clock_factor() {
-  switch(map(analogRead(UPPER_POT), 0, UPPER_POT_MAX, 0, 4)) {
+  switch(map(analogRead(LOWER_POT), 0, LOWER_POT_MAX, 0, 4)) {
     case 0:
       return 16;
     case 1:
