@@ -86,42 +86,26 @@ int gate_length = TRIGGER_LENGTH;
 int interval = 0;
 boolean out_high = false;
 
-enum mode {
-  mode_random_cv,
-  mode_trigger,
-  mode_gate
-};
-
 void setup() {
   randomSeed(analogRead(RND_PIN));
-  analogWrite(PWM_PIN, random(255));
+  analogWrite(PWM_PIN, 0);
 }
 
 long get_time() {
   return millis();
 }
 
-void trigger(mode current_mode) {
+void trigger() {
   if (!should_trigger()) {
     return;
   }
   out_high = true;
-  if (current_mode == mode_random_cv) {
-    analogWrite(PWM_PIN, random(255));
-  } else {
-    analogWrite(PWM_PIN, 255);
-  }
+  analogWrite(PWM_PIN, 255);
 }
 
-mode get_mode() {
-  switch (map(analogRead(UPPER_POT), 0, UPPER_POT_MAX, 0, 2)) {
-    case 0:
-      return mode_random_cv;
-    case 1:
-      return mode_trigger;
-    case 2:
-      return mode_gate;
-  }
+// Gate length as a percentage of the current clock interval 
+int get_gate_size() {
+  return map(analogRead(UPPER_POT), 0, UPPER_POT_MAX, 1, 100);
 }
 
 byte get_clock_factor() {
@@ -149,14 +133,12 @@ boolean should_trigger() {
 
 void loop() 
 {
-  mode current_mode = get_mode();
   clock_factor = get_clock_factor();
   gate = analogRead(CLOCK_IN);
   current_time = get_time();
-  trigger_length = current_mode == mode_gate ? gate_length : TRIGGER_LENGTH;
 
   // Determine whether any outgoing gate/trigger needs to be zero'd
-  if (out_high && current_mode != mode_random_cv && (current_time - last_trigger_out) > trigger_length) {
+  if (out_high && (current_time - last_trigger_out) > gate_length) {
     out_high = false;
     analogWrite(PWM_PIN, 0);
   }
@@ -169,9 +151,9 @@ void loop()
       if (skip == 0 || last_clock_factor != clock_factor) {
         skip = clock_factor;
         // Maybe trigger
-        trigger(current_mode);
+        trigger();
         if (last_trigger_out > 0) {
-          gate_length = (current_time - last_trigger_out) / 2;
+          gate_length = (current_time - last_trigger_out) * (get_gate_size() / 100);
         }
         last_trigger_out = current_time;
       }
